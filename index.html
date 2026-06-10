@@ -1,1 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engenharia IAV</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+  <div class="topbar">
+    <div class="topbar-title">🏗 ENGENHARIA IAV</div>
+    <div class="tabs">
+      <button class="tab active" onclick="goPage('dashboard')">Dashboard</button>
+      <button class="tab" onclick="goPage('obras')">Obras</button>
+      <button class="tab" onclick="goPage('curvas')">Curvas S</button>
+      <button class="tab" onclick="goPage('historico')">Histórico</button>
+    </div>
+    <button class="btn-share" onclick="gerarArquivoCompartilhar()">📤 Compartilhar</button>
+  </div>
+
+  <div class="page active" id="page-dashboard">
+    <div class="subtabs">
+      <button class="subtab active" onclick="goSub('execucao')">🔨 Obras em Execução</button>
+      <button class="subtab" onclick="goSub('concluidas')">✅ Obras Concluídas</button>
+    </div>
+
+    <div class="subpage active" id="sub-execucao">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="two-col">
+        <div class="chart-card">
+          <div class="chart-title">Avanço físico por obra</div>
+          <div class="leg">
+            <span class="leg-i"><span class="leg-b" style="background:#22C55E"></span>≥ 70%</span>
+            <span class="leg-i"><span class="leg-b" style="background:#F59E0B"></span>40–70%</span>
+            <span class="leg-i"><span class="leg-b" style="background:#EF4444"></span>&lt; 40%</span>
+          </div>
+          <div style="position:relative;height:200px"><canvas id="cAvanco"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribuição por faixa</div>
+          <div style="position:relative;height:155px"><canvas id="cFaixa"></canvas></div>
+          <div id="faixaLeg" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="sec-label">Obras em andamento — detalhamento</div>
+      <div class="cards-grid" id="cardsGrid"></div>
+    </div>
+
+    <div class="subpage" id="sub-concluidas">
+      <div class="chart-card" style="margin-bottom:14px;padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="font-size:11px;font-weight:600;color:var(--sub);white-space:nowrap">Filtrar por ano:</div>
+          <button onclick="filtroAnoSet('TODOS')" id="anoBtn_TODOS" style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid var(--nav);background:var(--nav);color:#fff;transition:.15s">
+            Todos os anos
+          </button>
+          <div id="anoBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          <span id="anoContador" style="font-size:11px;color:var(--sub);margin-left:auto;white-space:nowrap">119 edificações</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px" id="kpiConcluidas"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="sec-label" style="margin-bottom:0" id="tipoGridLabel">Total de edificações por tipo — acumulado histórico</div>
+      </div>
+      <div class="tipo-grid" id="tipoGrid"></div>
+
+      <div class="three-col">
+        <div class="chart-card">
+          <div class="chart-title" id="pizzaTipoTitle">Distribuição por tipo — acumulado</div>
+          <div style="position:relative;height:220px"><canvas id="cPizzaTipo"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Área construída por ano (m²)</div>
+          <div style="position:relative;height:220px"><canvas id="cBarAnos"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Investimento por ano (R$)</div>
+          <div style="position:relative;height:220px"><canvas id="cBarInv"></canvas></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;margin-bottom:16px">
+        <div class="chart-card">
+          <div class="chart-title" id="resumoGeralTitle">Resumo financeiro — geral acumulado</div>
+          <div id="resumoFinanceiro" style="padding:4px 0;display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+        </div>
+        <div class="chart-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div class="chart-title" style="margin-bottom:0">Resumo financeiro por tipo</div>
+            <select id="selTipoResumo" onchange="renderResumoTipo()" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--inp-border);background:var(--inp-bg);color:var(--text);cursor:pointer"></select>
+          </div>
+          <div id="resumoTipo" style="padding:4px 0;display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+        </div>
+      </div>
+
+      <div class="sec-label" style="margin-top:4px">Mapa de edificações concluídas</div>
+      <div class="chart-card" style="padding:14px;margin-bottom:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center">
+          <span style="font-size:11px;font-weight:600;color:var(--sub)">Filtrar:</span>
+          <button class="mapa-btn active" data-tipo="TODOS" onclick="filtrarMapa('TODOS',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #334155;background:#334155;color:#fff">Todos (119)</button>
+          <button class="mapa-btn" data-tipo="IGREJA" onclick="filtrarMapa('IGREJA',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #2AACE2;background:transparent;color:#2AACE2">⛪ Igrejas</button>
+          <button class="mapa-btn" data-tipo="SALAS MULTI USO" onclick="filtrarMapa('SALAS MULTI USO',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #9B59B6;background:transparent;color:#9B59B6">🏫 Salas Multi Uso</button>
+          <button class="mapa-btn" data-tipo="REFEITÓRIO" onclick="filtrarMapa('REFEITÓRIO',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #F59E0B;background:transparent;color:#F59E0B">🍽 Refeitórios</button>
+          <button class="mapa-btn" data-tipo="GINÁSIO" onclick="filtrarMapa('GINÁSIO',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #22C55E;background:transparent;color:#22C55E">🏟 Ginásios</button>
+          <button class="mapa-btn" data-tipo="FÁBRICA" onclick="filtrarMapa('FÁBRICA',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #EF4444;background:transparent;color:#EF4444">🏭 Fábricas</button>
+          <button class="mapa-btn" data-tipo="CASA PASTORAL" onclick="filtrarMapa('CASA PASTORAL',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #EC4899;background:transparent;color:#EC4899">🏠 Casas Pastorais</button>
+          <button class="mapa-btn" data-tipo="DORMITÓRIOS" onclick="filtrarMapa('DORMITÓRIOS',this)" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:2px solid #94A3B8;background:transparent;color:#94A3B8">🛏 Dormitórios</button>
+          <span id="mapaContador" style="font-size:11px;color:var(--sub);margin-left:auto">119 edificações visíveis</span>
+        </div>
+        <div id="mapaContainer" style="height:480px;border-radius:8px;overflow:hidden;border:1px solid var(--border)"></div>
+      </div>
+
+      <div style="display:none">
+        <div id="obrasConcluidasMes"></div>
+        <div id="apresAno"></div><div id="apresItens"></div>
+        <div id="destaquesApres"></div><div id="totaisApres"></div>
+        <div id="apresCardsExec"></div>
+        <canvas id="cPizzaMes"></canvas>
+        <canvas id="cPizzaAcum"></canvas>
+      </div>
+    </div>
+  </div>
